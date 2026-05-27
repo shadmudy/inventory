@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Inventario</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #111; color: #eee; min-height: 100vh; }
+  .app { max-width: 480px; margin: 0 auto; padding: 1rem; }
+
+  h1 { font-size: 22px; font-weight: 600; margin-bottom: 4px; color: #fff; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
+
+  .section-label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+
+  /* Reparto selector */
+  .dept-scroll { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 1.25rem; scrollbar-width: none; }
+  .dept-scroll::-webkit-scrollbar { display: none; }
+  .dept-btn { flex-shrink: 0; padding: 6px 14px; border-radius: 99px; border: 1px solid #333; background: #1a1a1a; color: #aaa; font-size: 13px; cursor: pointer; white-space: nowrap; transition: all 0.15s; }
+  .dept-btn.active { background: #fff; color: #111; border-color: #fff; font-weight: 500; }
+
+  /* Material dropdown */
+  .mat-wrap { position: relative; margin-bottom: 1rem; }
+  .mat-select-btn { width: 100%; padding: 12px 16px; background: #1a1a1a; border: 1px solid #333; border-radius: 12px; color: #eee; font-size: 15px; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .mat-select-btn.has-value { color: #fff; }
+  .mat-select-btn .arrow { color: #666; font-size: 12px; transition: transform 0.2s; }
+  .mat-select-btn.open .arrow { transform: rotate(180deg); }
+
+  .mat-panel { background: #1a1a1a; border: 1px solid #333; border-radius: 12px; overflow: hidden; margin-top: 6px; }
+  .mat-search { width: 100%; padding: 12px 16px; background: #222; border: none; border-bottom: 1px solid #2a2a2a; color: #eee; font-size: 15px; outline: none; }
+  .mat-search::placeholder { color: #555; }
+  .mat-list { max-height: 280px; overflow-y: auto; }
+  .mat-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #1e1e1e; display: flex; flex-direction: column; gap: 2px; transition: background 0.1s; }
+  .mat-item:last-child { border-bottom: none; }
+  .mat-item:hover, .mat-item:active { background: #252525; }
+  .mat-item.done { border-left: 3px solid #4a8; }
+  .mat-item .item-name { font-size: 14px; color: #ddd; }
+  .mat-item.done .item-name { color: #6db; }
+  .mat-item .item-desc { font-size: 12px; color: #555; }
+  .mat-item .item-code { font-size: 11px; color: #444; font-family: monospace; }
+  .mat-item.done .item-code { color: #3a6; }
+  .mat-empty { padding: 16px; text-align: center; color: #555; font-size: 14px; }
+
+  /* Selected material card */
+  .selected-card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 14px 16px; margin-bottom: 1rem; }
+  .selected-name { font-size: 16px; font-weight: 500; color: #fff; }
+  .selected-desc { font-size: 12px; color: #666; margin-top: 2px; }
+  .selected-code { font-size: 11px; color: #444; font-family: monospace; margin-top: 4px; }
+
+  .qty-row { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+  .qty-input { flex: 1; padding: 11px 14px; background: #222; border: 1px solid #333; border-radius: 10px; color: #fff; font-size: 18px; font-weight: 500; text-align: center; outline: none; }
+  .qty-input:focus { border-color: #555; }
+  .qty-input::placeholder { color: #444; }
+  .btn-add { padding: 11px 20px; background: #fff; color: #111; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn-add:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* Log */
+  .log-section { margin-top: 1.5rem; }
+  .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .log-badge { font-size: 12px; background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 99px; padding: 3px 10px; color: #666; }
+  .log-box { background: #111; border: 1px solid #222; border-radius: 10px; padding: 12px 14px; font-family: 'Courier New', monospace; font-size: 13px; color: #aaa; min-height: 80px; max-height: 200px; overflow-y: auto; white-space: pre; line-height: 1.7; }
+  .log-empty { color: #444; font-family: -apple-system, sans-serif; font-style: italic; }
+  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+  .btn-copy { flex: 1; padding: 10px; font-size: 14px; border: 1px solid #333; border-radius: 10px; background: #1a1a1a; color: #ccc; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn-copy:active { background: #222; }
+  .btn-reset { padding: 10px 14px; font-size: 14px; border: 1px solid #2a2a2a; border-radius: 10px; background: #1a1a1a; color: #555; cursor: pointer; }
+  .btn-reset:active { background: #222; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #fff; color: #111; padding: 9px 20px; border-radius: 99px; font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.2s; pointer-events: none; white-space: nowrap; z-index: 999; }
+  .toast.show { opacity: 1; }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>📦 Inventario</h1>
+  <p class="subtitle">Seleziona materiale, inserisci quantità, aggiungi al log</p>
+
+  <p class="section-label">Reparto</p>
+  <div class="dept-scroll" id="deptScroll"></div>
+
+  <p class="section-label">Materiale</p>
+  <div class="mat-wrap">
+    <button class="mat-select-btn" id="matSelectBtn">
+      <span id="matBtnLabel" style="color:#555">Scegli materiale...</span>
+      <span class="arrow">▼</span>
+    </button>
+    <div class="mat-panel hidden" id="matPanel">
+      <input type="text" class="mat-search" id="matSearch" placeholder="Cerca per nome o codice..." autocomplete="off" autocorrect="off" spellcheck="false" />
+      <div class="mat-list" id="matList"></div>
+    </div>
+  </div>
+
+  <div class="selected-card hidden" id="selectedCard">
+    <div class="selected-name" id="selName"></div>
+    <div class="selected-desc" id="selDesc"></div>
+    <div class="selected-code" id="selCode"></div>
+    <div class="qty-row">
+      <input type="number" class="qty-input" id="qtyInput" min="1" placeholder="Qtà" inputmode="numeric" />
+      <button class="btn-add" id="btnAdd">+ Aggiungi</button>
+    </div>
+  </div>
+
+  <div class="log-section">
+    <div class="log-header">
+      <p class="section-label" style="margin:0">Log finale</p>
+      <span class="log-badge" id="logBadge">0 voci</span>
+    </div>
+    <div class="log-box" id="logBox"><span class="log-empty">Nessuna voce ancora...</span></div>
+    <div class="btn-row">
+      <button class="btn-copy" id="btnCopy">📋 Copia log</button>
+      <button class="btn-reset" id="btnReset" title="Reset">🗑</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MATERIALS = [{"code":"BM100123","name":"GRAFFE NR.53/10MM","desc":"Confezione = 5000 PZ","dept":"Finitura"},{"code":"BM100106","name":"GRASSO \"MONTI\" 71.2","desc":"Contenitore da 5 KG","dept":"Tessuti"},{"code":"BM100113","name":"AGHI 134-35 LR DPx35LR","desc":"1 CF=10 PZ","dept":"Cucitura"},{"code":"BM100099","name":"ETICHETTE ADESIVE 12X40 MM","desc":"1 CF = 10 RT x 500 NR = 5000 NR","dept":"Cucitura"},{"code":"BM100168","name":"FETTUCCINA/GUAINA IN PVC 14X3","desc":"","dept":"Cucitura"},{"code":"BM100093","name":"FETTUCCINA/GUAINA IN PVC 2,50x10,55","desc":"","dept":"Cucitura"},{"code":"BM100108","name":"FETTUCCINA/GUAINA PVC FREE 12x3 mm","desc":"","dept":"Cucitura"},{"code":"BM100088","name":"FILO SABA 80","desc":"","dept":"Cucitura"},{"code":"BM100107","name":"FILO SYNTON 40 Tex 70","desc":"","dept":"Cucitura"},{"code":"BM100051","name":"ROTACUT","desc":"","dept":"Cucitura"},{"code":"BN100043","name":"TUBO IN CARTONE DIAM. 5 CM","desc":"","dept":"Finitura"},{"code":"BM100118","name":"BIADESIVO ROTOLINO LINER ROSSO","desc":"25mm x 50 MT","dept":"Finitura"},{"code":"BH100018","name":"ROLL-UP 80X200 MONOFACCIALE","desc":"","dept":"Finitura"},{"code":"BH100022","name":"ROLL-UP EASY 100X200 MONOFACCIALE","desc":"","dept":"Finitura"},{"code":"BM100032","name":"FETTUCCINA CON NERVO","desc":"","dept":"Finitura"},{"code":"BN100018","name":"FOGLI CARTONE 2400 X 3500 MM","desc":"","dept":"Finitura"},{"code":"BM100076","name":"GRAFFE PER CARTONE MOD.JK 779/16","desc":"","dept":"Finitura"},{"code":"BM100129","name":"NASTRO ADESIVO AVANA 50mm","desc":"","dept":"Finitura"},{"code":"BM100041","name":"BORDATURA SP 10 NERO","desc":"COLORE NERO - 50 MT","dept":"Finitura"},{"code":"BM100043","name":"BORDATURA SP 10 BIANCO","desc":"COLORE BIANCO - 50 MT","dept":"Finitura"},{"code":"BM100042","name":"BORDATURA SP 19 NERO","desc":"COLORE NERO - 50 MT","dept":"Finitura"},{"code":"BM100044","name":"BORDATURA SP 19 NERO","desc":"COLORE BIANCO - 50 MT","dept":"Finitura"},{"code":"BM100071","name":"NASTRO ADESIVO TRASPARENTE","desc":"","dept":"Finitura"},{"code":"BM100130","name":"NASTRO ADESIVO CARTA","desc":"","dept":"Finitura"},{"code":"BM100039","name":"NASTRO MAGNETICO A 3 POLARITA'","desc":"ROTOLO H CM 1,27 X 30 MT","dept":"Finitura"},{"code":"BL100058","name":"OCCHIELLI 8 B OTTONE NICHELATO","desc":"DIAM 14 MM 1000 PZ","dept":"Finitura"},{"code":"BL100029","name":"OCCHIELLI E RONDELLE DIAM 12MM","desc":"TRASPARENTI - 1000 PZ","dept":"Finitura"},{"code":"BM100132","name":"PUNTI CARTONE A34 A/35 18MM","desc":"SCAT.DA 1.000 PZ=CF =20,000 PZ","dept":"Finitura"},{"code":"BL100059","name":"RONDELLE VL-60 OTTONE NICHELATO","desc":"DIAM 14 MM 1000 PZ","dept":"Finitura"},{"code":"BN100005","name":"TAPPO X  TUBO10 CM","desc":"(CF DA 700 PZ)","dept":"Finitura"},{"code":"BN100007","name":"TAPPO X  TUBO15 CM","desc":"(CF DA 200 PZ)","dept":"Finitura"},{"code":"BN100001","name":"TUBO 10 CM","desc":"- LUNGH. 330 CM","dept":"Finitura"},{"code":"BN100003","name":"TUBO 15 CM","desc":"- LUNGH. 330 CM","dept":"Finitura"},{"code":"BM100034","name":"VELCRO ADESIVO FEMMINA 2 CM","desc":"COL. BIANCO 1 CF=50 MT","dept":"Finitura"},{"code":"BM100038","name":"VELCRO ADESIVO FEMMINA 5 CM","desc":"COL. BIANCO 1 CF=25 MT","dept":"Finitura"},{"code":"BM100037","name":"VELCRO ADESIVO MASCHIO 5 CM","desc":"COL. BIANCO 1 CF=25 MT","dept":"Finitura"},{"code":"BM100035","name":"VELCRO ADESIVO MASCHIO 2CM","desc":"COL. BIANCO 1 CF=50 MT","dept":"Finitura"},{"code":"BM100028","name":"NASTRO ADESIVO AVANA","desc":"H 50 MM X 132 MT / 1 CF = 36 RT","dept":"Finitura"},{"code":"BM100026","name":"NASTRO CARTA 25MM","desc":"1 CF = 72 RT","dept":"Finitura"},{"code":"BM100027","name":"NASTRO CARTA  50MM","desc":"1 CF = 36 RT","dept":"Finitura"},{"code":"BM100040","name":"BIADESIVO IN BOBINA 3M TRASPARENTE","desc":"","dept":"Rigido"},{"code":"BM100050","name":"FRESA 3.3 DIBOND","desc":"GAMBO DIAM.6 MM","dept":"Rigido"},{"code":"BM100056","name":"FRESA 2 MM (TIP/6 BIT-AUS06-2006-50)","desc":"TIP/6 BIT-AUS06-2006-50","dept":"Rigido"},{"code":"BM100057","name":"FRESA 3 MM (TIP/11 BIT-AUS06-3011-509)","desc":"TIP/11 BIT-AUS06-3011-50","dept":"Rigido"},{"code":"BM100016","name":"FRESA 4 MM (TIP/12 BIT-AUS06-4012-50)","desc":"TIP/12 BIT-AUS06-4012-50","dept":"Rigido"},{"code":"BM100055","name":"FRESA MULTIPLA 3MM (TIP/11 BITMUS06-3011-50)","desc":"TIP/11 BITMUS06-3011-50","dept":"Rigido"},{"code":"BM100045","name":"FRESA MULTIPLA 4MM (TIP/22 BIT - MUS06-4022-50)","desc":"TIP/22 BIT - MUS06-4022-50","dept":"Rigido"},{"code":"BM100096","name":"FRESA MULTIPLA 6MM (TIP/22 BIT - MUS06-6022-58)","desc":"TIP/22 BIT - MUS06-6022-58","dept":"Rigido"},{"code":"BM100009","name":"VIBRACUT","desc":"(UT.VIBRANTE)","dept":"Rigido"},{"code":"BM100014","name":"LAMA RIGID-BLADE","desc":"(RIGID KNIFE)","dept":"Rigido"},{"code":"BF100001","name":"ADESIVO BIANCO/NERO (INTAGLIO)","desc":"BIANCO/NERO","dept":"Vinili"},{"code":"BF100002","name":"ADESIVO COLORATO (INTAGLIO)","desc":"OPACO COLORATO","dept":"Vinili"},{"code":"BF100005","name":"ADESIVO SABBIATO","desc":"","dept":"Vinili"},{"code":"BF100020","name":"APPLICATION TAPE HT 95","desc":"- H CM 122X100 MT","dept":"Vinili"},{"code":"BF100014","name":"APPLICATION TAPE MT 95","desc":"- H CM 122X100 MT","dept":"Vinili"},{"code":"BM100115","name":"COLLA \"ADHESIVA\" U - 250 GR","desc":"1 CF DA 24 SCATOLE","dept":"Vinili"},{"code":"BM100070","name":"COLLA \"GAVADES\" SECCHIO DA 20 KG","desc":"SECCHIO DA 20 KG","dept":"Vinili"},{"code":"BM100148","name":"COLLA PER CARTA DA PARATI METYLAN","desc":"SPEZIAL GR. 180","dept":"Vinili"},{"code":"BM100102","name":"COLLA PER CARTA DA PARATI METYLAN","desc":"OVALIT T DI HENKEL DA KG 5","dept":"Vinili"},{"code":"BM100091","name":"IMPERMEABILIZZANTE NORTIG 15 BIANCO","desc":"CONF. DA 20 KG","dept":"Vinili"},{"code":"BE100006","name":"LAMINAZIONE CALPESTABILE DOL5900","desc":"H 137cm","dept":"Vinili"},{"code":"BE100008","name":"LAMINAZIONE CALPESTABILE DOL6000","desc":"H 137cm","dept":"Vinili"},{"code":"BE100013","name":"LAMINAZIONE MONOMERICA LUCIDA","desc":"3460","dept":"Vinili"},{"code":"BE100012","name":"LAMINAZIONE MONOMERICA OPACA","desc":"DOL 3480","dept":"Vinili"},{"code":"BE100015","name":"LAMINAZIONE POLIMERICA LUCIDA","desc":"DOL 2460","dept":"Vinili"},{"code":"BE100014","name":"LAMINAZIONE POLIMERICA OPACA","desc":"DOL 2480","dept":"Vinili"},{"code":"BM100095","name":"RESINA PROTETTIVA KAPPA MONO","desc":"BABOON - CF DA KG 0,500","dept":"Vinili"},{"code":"BM100085","name":"ALCOOL ISOPROPILICO","desc":"TANICA DA 25 LT","dept":"Finitura"},{"code":"BI100114","name":"CANON MAINTENANCE FILTER 16XX","desc":"COLORADO 16XX","dept":"Vinili"},{"code":"BI100099","name":"CANON INK BLACK","desc":"COLORADO 1630","dept":"Vinili"},{"code":"BI100100","name":"CANON INK CYAN","desc":"COLORADO 1630","dept":"Vinili"},{"code":"BI100101","name":"CANON INK MAGENTA","desc":"COLORADO 1630","dept":"Vinili"},{"code":"BI100098","name":"CANON INK WHITE","desc":"COLORADO M3","dept":"Vinili"},{"code":"BI100102","name":"CANON INK YELLOW","desc":"COLORADO 1630","dept":"Vinili"},{"code":"BI100104","name":"CANON TISSUE CASSETTE","desc":"CASSETTE SERIE M","dept":"Vinili"},{"code":"BI100107","name":"CANON AEROSOL FILTER","desc":"KIT COLORADO M","dept":"Vinili"},{"code":"BI100105","name":"CANON LUBRICATION SET-A3","desc":"","dept":"Vinili"},{"code":"BG100001","name":"CARTA BLUEBACK H155","desc":"H 155 X 100/150 MTL","dept":"Vinili"},{"code":"BC100079","name":"DIBOND 2MM","desc":"- 3050X1500","dept":"Rigido"},{"code":"BC100109","name":"DIBOND 3MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100085","name":"FOREX NERO 10 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100086","name":"FOREX  NERO 3 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100084","name":"FOREX NERO 5 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100105","name":"FOREX ROSSO 3 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BI100080","name":"INK  RHOTEX BLACK","desc":"","dept":"Tessuti"},{"code":"BI100078","name":"INK  RHOTEX CYANO","desc":"","dept":"Tessuti"},{"code":"BI100079","name":"INK  RHOTEX MAGENTA","desc":"","dept":"Tessuti"},{"code":"BI100081","name":"INK  RHOTEX YELLOW","desc":"","dept":"Tessuti"},{"code":"BI100085","name":"INK 512 LED / P5 BLACK","desc":"","dept":"Rigido/Tessuti"},{"code":"BI100090","name":"INK 512 LED / P5 CYANO v3","desc":"","dept":"Rigido/Tessuti"},{"code":"BI100089","name":"INK 512 LED / P5 MAGENTA v3","desc":"","dept":"Rigido/Tessuti"},{"code":"BI100091","name":"INK 512 LED / P5 YELLOW v3","desc":"","dept":"Rigido/Tessuti"},{"code":"BI100083","name":"INK 512 LED LIGHT CYAN","desc":"","dept":"Rigido/Tessuti"},{"code":"BI100084","name":"INK 512 LED LIGHT MAGENTA","desc":"","dept":"Rigido/Tessuti"},{"code":"BM100001","name":"PANNO PULIZIA TESTINE","desc":"cn=150pz 23x23","dept":"Rigido/Tessuti"},{"code":"BM100131","name":"PEZZAME COTONE BIANCO TOVAGLIATO","desc":"KG 20","dept":"Finitura"},{"code":"BC100108","name":"POLIPROPILENE ALVEOLARE 5 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100076","name":"POLIPROPILENE ALVEOLARE AKYPRINT","desc":"SP 3 MM - 3050X2050","dept":"Rigido"},{"code":"BC100011","name":"POLIPROPILENE ALVEOLARE 10 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100062","name":"POLIPROPILENE ALVEOLARE 3 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100082","name":"POLIPROPILENE ALVEOLARE 8 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100106","name":"FOREX 3 MM","desc":"- NO LINER - 3050X2050","dept":"Rigido"},{"code":"BC100057","name":"FOREX 5 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100001","name":"FOREX 1 MM","desc":"","dept":"Rigido"},{"code":"BC100008","name":"FOREX 10 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BM100047","name":"LIQUIDO TESTINE","desc":"CONF. DA 1 LT","dept":"Rigido/Tessuti"},{"code":"BC100050","name":"SMART-X 10 MM","desc":"- 3050X2030","dept":"Rigido"},{"code":"BC100049","name":"SMART-X 19 MM","desc":"- 3050X2030","dept":"Rigido"},{"code":"BC100013","name":"SANDWICH 10 MM","desc":"","dept":"Rigido"},{"code":"BC100014","name":"SANDWICH 19 MM","desc":"","dept":"Rigido"},{"code":"BG100014","name":"WATERTECK (FIBRA DI VETRO)","desc":"","dept":"Rigido"},{"code":"BD100044","name":"MICROVENTOSA 3021 DOT","desc":"MPI 3021 DOT","dept":"Vinili"},{"code":"BD100025","name":"MONOMERICO 3021 HOP","desc":"MPI 3021 HOP","dept":"Vinili"},{"code":"BD100043","name":"ONE WAY","desc":"","dept":"Rigido"},{"code":"BD100028","name":"POLIMERICO LUCIDO 2004 EA HOP","desc":"2004 EA HOP","dept":"Vinili"},{"code":"BD100033","name":"SUPERTACK 3026","desc":"- 3026","dept":"Vinili"},{"code":"BD100012","name":"POLIMERICO TRASLUCENTE 2150","desc":"2150","dept":"Vinili"},{"code":"BD100011","name":"POLIMERICO TRASPARENTE 2040","desc":"2040","dept":"Vinili"},{"code":"BD100039","name":"CALPESTABILE FLOOR & WALL","desc":"BREVE DURATA - H CM 137 X 50 MT","dept":"Vinili"},{"code":"BG100020","name":"CARTA DA PARATI BIANCA","desc":"","dept":"Tessuti"},{"code":"BG100015","name":"CARTA PER SUBLIM. PATINATA AVANA","desc":"GR.30 - H 320 CM - DIAM.23 CM","dept":"Tessuti"},{"code":"BG100016","name":"CARTA PER SUBLIMAZIONE BLOT 70","desc":"(Boost)","dept":"Tessuti"},{"code":"BM100073","name":"FILTRI PER MACCHINARI DURST","desc":"","dept":"Rigido/Tessuti"},{"code":"BA100020","name":"GOMMA MAGNETICA 0,3 MM","desc":"IN PET BIANCA OPACA","dept":"Rigido"},{"code":"BA100027","name":"MESH 320","desc":"H 3,20 MT","dept":"Tessuti"},{"code":"BA100028","name":"MESH 500","desc":"H 5 MT","dept":"Tessuti"},{"code":"BA100012","name":"MESH","desc":"!NON BLOCCARE! BART","dept":"Tessuti"},{"code":"BA100025","name":"MESH CON LINER","desc":"","dept":"Tessuti"},{"code":"BA100021","name":"COATIZZATO (PVC RIGIDO 340 MY)","desc":"","dept":"Rigido"},{"code":"BA100018","name":"TELO PVC BACKLIT 500","desc":"H 5 MT","dept":"Tessuti"},{"code":"BA100019","name":"TELO PVC BACKLIT 250","desc":"H 2,50 MT (taglio da bb H5 mt)","dept":"Tessuti"},{"code":"BA100017","name":"TELO PVC BACKLIT 320","desc":"H 3,20 MT","dept":"Tessuti"},{"code":"BA100029","name":"TELO PVC BLOCKOUT HEAVY 320","desc":"H 320 cm x 50 mt","dept":"Tessuti"},{"code":"BA100033","name":"TELO PVC BLOCKOUT HEAVY 250","desc":"H 250 cm x 50 mt","dept":"Tessuti"},{"code":"BA100034","name":"TELO PVC BLOCKOUT HEAVY 110","desc":"H 110 cm x 50 mt (taglio da bbH2,2)","dept":"Tessuti"},{"code":"BA100030","name":"TELO PVC BLOCKOUT HEAVY 160","desc":"H 160 cm x 50 mt (taglio da bbH3,2)","dept":"Tessuti"},{"code":"BA100024","name":"TELO PVC FRONTLIT 500","desc":"H 5 MT","dept":"Tessuti"},{"code":"BA100023","name":"TELO PVC FRONTLIT 320","desc":"H 3,20 MT","dept":"Tessuti"},{"code":"BA100003","name":"TELO PVC BLACK-BACK 500","desc":"H 5 MT","dept":"Tessuti"},{"code":"BA100014","name":"TELO PVC BLACK-BACK 320","desc":"H 3,20 MT","dept":"Tessuti"},{"code":"BB100030","name":"CANVAS BLACK BACK 500","desc":"H 5 MT","dept":"Tessuti"},{"code":"BB100029","name":"CANVAS BLACK BACK 320","desc":"H 3,20 MT","dept":"Tessuti"},{"code":"BB100015","name":"TESSUTO FLAG SUPREME DTX","desc":"","dept":"Tessuti"},{"code":"BB100027","name":"TESSUTO MAMBO 320","desc":"H 3,20 MT","dept":"Tessuti"},{"code":"BB100028","name":"TESSUTO MAMBO 500","desc":"H 5,05 MT","dept":"Tessuti"},{"code":"BB100010","name":"TESSUTO RETRO NERO 320","desc":"RETRO NERO H 3,20 MT","dept":"Tessuti"},{"code":"BB100001","name":"TESSUTO POLIESTERE PES- STRETCH","desc":"","dept":"Tessuti"},{"code":"BB100019","name":"TESSUTO POLIESTERE PES-STRETCH","desc":"RETRO NERO PER STAMPA UV /H 5,05MT","dept":"Tessuti"},{"code":"BB100033","name":"TESSUTO TANGO 320","desc":"175 DTX - H 3,20 MT","dept":"Tessuti"},{"code":"BB100031","name":"TNT IN POLIPROPILENE","desc":"","dept":"Tessuti"},{"code":"BM100146","name":"BLOB - ABBATTITORE DI SCHIUMA","desc":"(6 X 1LT)","dept":"Finitura"},{"code":"BI100103","name":"CANON 6357C001AA MAINTENANCE TRAY","desc":"COLORADO SERIE M","dept":"Vinili"},{"code":"BG100018","name":"CARTA SUBLI TRANSJET DS BOOST 70GR","desc":"H 3,20 X 750 MT","dept":"Tessuti"},{"code":"BC100077","name":"CARTONE ALVEOLARE SP 10 MM","desc":"HAVANA/HAVANA/HAVANA - 3050X2030","dept":"Finitura"},{"code":"BC100075","name":"CARTONE ALVEOLARE SP 10 MM","desc":"BIANCO/HAVANA/BIANCO - 3050X2030","dept":"Finitura"},{"code":"BC100081","name":"CARTONE ALVEOLARE SP 16 MM","desc":"BIANCO/AVANA/BIANCO - 3050X2030","dept":"Finitura"},{"code":"BC100066","name":"CARTONE ALVEOLARE SP 19 MM","desc":"BIANCO/AVANA/BIANCO - 3050X2030","dept":"Finitura"},{"code":"BM100060","name":"COLLA \"ADHESIVA\" U - 300 GR","desc":"1 CF DA 24 SCATOLE","dept":"Vinili"},{"code":"BH100023","name":"ESPOSITORE ROLL-UP EASY","desc":"F.TO 100 X 200 CM BIFACCIALE","dept":"Finitura"},{"code":"BH100019","name":"ESPOSITORE ROLL-UP EASY","desc":"F.TO 80 X 200 CM BIFACCIALE","dept":"Finitura"},{"code":"BM100135","name":"FETTUCCIA/GUAINA IN PVC 14x3 mm","desc":"- nr.1 rt = 200 mtl","dept":"Cucitura"},{"code":"BM100136","name":"FRESA INCISIONE 90° X 3,5MM","desc":"","dept":"Rigido"},{"code":"BM100090","name":"IMPERMEABILIZZANTE NORTIG 15 BIANCO","desc":"CONF. DA 5 KG","dept":"Vinili"},{"code":"BM100127","name":"LAMA COLTELLO OLFA LB10","desc":"CONF. (569860)","dept":"Rigido"},{"code":"BM100164","name":"LAMA MARTOR 36020 (CF. 10 PZ)","desc":"PER TAGLIERINA SUMMA","dept":"Vinili"},{"code":"BM100103","name":"LAME STD.TANGENTIAL KNIFE36 DEGREES","desc":"1 CF = 5 PZ","dept":"Rigido"},{"code":"BA100022","name":"LINOLEUM","desc":"","dept":"Rigido"},{"code":"BC100056","name":"PVC SEMIESPANSO LIGHT SP 3 MM","desc":"- 3050X2050","dept":"Rigido"},{"code":"BC100005","name":"PVC SEMIESPANSO SP 19 MM","desc":"- 3050X1560","dept":"Rigido"},{"code":"BC100073","name":"PVC SEMIESPANSO SP 2 MM","desc":"- 3050X2030","dept":"Rigido"},{"code":"BM100105","name":"RESINA PROTETTIVA KAPPA MONO","desc":"BABOON - CF DA KG 5","dept":"Vinili"},{"code":"BM100141","name":"RIBBON PER SEZIONATRICE","desc":"PER SCHEDE PRODUZIONE- H 11CMX300MT","dept":"Misc"},{"code":"BM100162","name":"RIBBON ZEBRA 2300 CERA 110X450 MT","desc":"ANIMA D. 25 MM - CF. 12 PZ","dept":"Misc"},{"code":"BC100051","name":"SANDWICH SMART-X SP 5 MM","desc":"- 3050X2030","dept":"Rigido"},{"code":"BN100049","name":"SCATOLA 2 ONDE AVANA 40X30X40","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100062","name":"SCATOLA 2 ONDE AVANA 43X31X25","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100037","name":"SCATOLA 2 ONDE AVANA 45X30X25","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100031","name":"SCATOLA 2 ONDE AVANA 45X35X25","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100032","name":"SCATOLA 2 ONDE AVANA 50X30X30","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100048","name":"SCATOLA 2 ONDE AVANA 50X32X32","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100033","name":"SCATOLA 2 ONDE AVANA 50X40X35","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100050","name":"SCATOLA 2 ONDE AVANA 60X30X30","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100051","name":"SCATOLA 2 ONDE AVANA 60X40X20","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100063","name":"SCATOLA 2 ONDE AVANA 60X40X30","desc":"MIS. INT.","dept":"Finitura"},{"code":"BN100044","name":"SCATOLA AMERICANA PERSONALIZ.BABOON","desc":"PAT.DX LATO P - DIM.277x207x656 MM","dept":"Misc"},{"code":"BN100065","name":"SCATOLA FUSTELLATA EXTRAPIATTA","desc":"31X22X5 CM","dept":"Misc"},{"code":"BA100032","name":"TELO PVC BLOCKOUT HEAVY","desc":"H 110 cm x 30 mt","dept":"Tessuti"},{"code":"BA100035","name":"TELO PVC BLOCKOUT HEAVY","desc":"H 160 cm x 30 mt","dept":"Tessuti"},{"code":"BB100022","name":"TESSUTO SAMBA GREEN FR 205gr","desc":"","dept":"Tessuti"},{"code":"BD100045","name":"VINILE ADES. ATTACCA/STACCA TRASPAR","desc":"MPI 3041 DOT","dept":"Vinili"},{"code":"BD100014","name":"VINILE ADESIVO POLIMERICO LUCIDO","desc":"2001 HOP (RIMOVIBILE)","dept":"Vinili"},{"code":"BD100016","name":"VINILE ADESIVO POLIMERICO ONE WAY","desc":"","dept":"Vinili"}];
+
+const DEPTS = ['Tutti', ...Array.from(new Set(MATERIALS.map(m => m.dept))).sort()];
+
+let activeDept = 'Tutti';
+let panelOpen = false;
+let searchMode = false;
+let selected = null;
+let doneCodes = new Set();
+let log = JSON.parse(localStorage.getItem('inv_log2') || '[]');
+if (log.length) doneCodes = new Set(log.map(e => e.code));
+
+// Dept buttons
+const deptScroll = document.getElementById('deptScroll');
+DEPTS.forEach(d => {
+  const btn = document.createElement('button');
+  btn.className = 'dept-btn' + (d === 'Tutti' ? ' active' : '');
+  btn.textContent = d;
+  btn.addEventListener('click', () => {
+    activeDept = d;
+    document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderList('');
+    if (panelOpen) document.getElementById('matSearch').value = '';
+  });
+  deptScroll.appendChild(btn);
+});
+
+// Panel toggle
+const matSelectBtn = document.getElementById('matSelectBtn');
+const matPanel = document.getElementById('matPanel');
+const matSearch = document.getElementById('matSearch');
+const matList = document.getElementById('matList');
+const matBtnLabel = document.getElementById('matBtnLabel');
+
+matSelectBtn.addEventListener('click', () => {
+  if (panelOpen) {
+    closePanel();
+  } else {
+    openPanel();
+  }
+});
+
+function openPanel() {
+  panelOpen = true;
+  matPanel.classList.remove('hidden');
+  matSelectBtn.classList.add('open');
+  renderList('');
+  setTimeout(() => matSearch.focus(), 100);
+}
+
+function closePanel() {
+  panelOpen = false;
+  matPanel.classList.add('hidden');
+  matSelectBtn.classList.remove('open');
+  matSearch.value = '';
+}
+
+matSearch.addEventListener('input', () => {
+  renderList(matSearch.value);
+});
+
+function getFiltered(query) {
+  let list = activeDept === 'Tutti' ? MATERIALS : MATERIALS.filter(m => m.dept === activeDept);
+  if (query.trim()) {
+    const q = query.trim().toLowerCase();
+    list = list.filter(m => m.name.toLowerCase().includes(q) || m.code.toLowerCase().includes(q) || m.desc.toLowerCase().includes(q));
+  }
+  // Done items go to bottom
+  const notDone = list.filter(m => !doneCodes.has(m.code));
+  const done = list.filter(m => doneCodes.has(m.code));
+  return [...notDone, ...done];
+}
+
+function renderList(query) {
+  const items = getFiltered(query);
+  if (items.length === 0) {
+    matList.innerHTML = '<div class="mat-empty">Nessun risultato</div>';
+    return;
+  }
+  matList.innerHTML = items.map(m => `
+    <div class="mat-item ${doneCodes.has(m.code) ? 'done' : ''}" data-code="${m.code}">
+      <span class="item-name">${m.name}</span>
+      ${m.desc ? `<span class="item-desc">${m.desc}</span>` : ''}
+      <span class="item-code">${m.code}</span>
+    </div>
+  `).join('');
+  matList.querySelectorAll('.mat-item').forEach(el => {
+    el.addEventListener('click', () => selectMaterial(el.dataset.code));
+  });
+}
+
+function selectMaterial(code) {
+  selected = MATERIALS.find(m => m.code === code);
+  matBtnLabel.textContent = selected.name;
+  matBtnLabel.style.color = '#eee';
+  closePanel();
+  document.getElementById('selName').textContent = selected.name;
+  document.getElementById('selDesc').textContent = selected.desc || '';
+  document.getElementById('selCode').textContent = selected.code;
+  document.getElementById('selectedCard').classList.remove('hidden');
+  document.getElementById('qtyInput').value = '';
+  document.getElementById('qtyInput').focus();
+}
+
+// Add to log
+document.getElementById('btnAdd').addEventListener('click', addEntry);
+document.getElementById('qtyInput').addEventListener('keydown', e => { if (e.key === 'Enter') addEntry(); });
+
+function addEntry() {
+  if (!selected) return;
+  const qty = document.getElementById('qtyInput').value.trim();
+  if (!qty || isNaN(qty) || Number(qty) < 1) { showToast('Inserisci una quantità valida'); return; }
+  log.push({ code: selected.code, name: selected.name, qty: parseInt(qty) });
+  doneCodes.add(selected.code);
+  localStorage.setItem('inv_log2', JSON.stringify(log));
+  renderLog();
+  showToast('✓ ' + selected.name);
+  // Reset
+  selected = null;
+  matBtnLabel.textContent = 'Scegli materiale...';
+  matBtnLabel.style.color = '#555';
+  document.getElementById('selectedCard').classList.add('hidden');
+  document.getElementById('qtyInput').value = '';
+  renderList(matSearch.value);
+}
+
+// Log
+function renderLog() {
+  const box = document.getElementById('logBox');
+  const badge = document.getElementById('logBadge');
+  if (log.length === 0) {
+    box.innerHTML = '<span class="log-empty">Nessuna voce ancora...</span>';
+    badge.textContent = '0 voci';
+  } else {
+    box.textContent = log.map(e => `${e.code}\n${e.qty}`).join('\n');
+    badge.textContent = log.length + (log.length === 1 ? ' voce' : ' voci');
+    box.scrollTop = box.scrollHeight;
+  }
+}
+
+document.getElementById('btnCopy').addEventListener('click', () => {
+  if (log.length === 0) { showToast('Log vuoto'); return; }
+  const text = log.map(e => `${e.code}\n${e.qty}`).join('\n');
+  navigator.clipboard.writeText(text).then(() => showToast('Log copiato!')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+    showToast('Log copiato!');
+  });
+});
+
+document.getElementById('btnReset').addEventListener('click', () => {
+  if (log.length === 0) return;
+  if (confirm('Cancellare tutto il log e resettare i materiali compilati?')) {
+    log = []; doneCodes = new Set();
+    localStorage.removeItem('inv_log2');
+    renderLog();
+    renderList('');
+    showToast('Log cancellato');
+  }
+});
+
+// Toast
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+renderLog();
+</script>
+</body>
+</html>
